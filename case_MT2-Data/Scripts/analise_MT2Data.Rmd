@@ -1,0 +1,1640 @@
+---
+title: "Emplacamento Caminhões - Forecast"
+author: "Pedro Borges"
+date: "01/12/2024"
+output:
+  rmdformats::material:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: true
+    highlight: tango
+editor_options: 
+  markdown: 
+    wrap: 76
+---
+
+# <font color="#195447">**1. PROJETO** </font>
+
+### **Desafío Técnico: Cientista de Dados Pleno - MT2 Data**
+
+> Este documento foi confeccionado em `RMarkdown` através da `linguagem R`
+> de programação, para melhor visualização e acompanhamento das análises.
+
+### OBJETIVOS
+
+> 1.  Desenvolver algoritmos em R para previsão de uma série histórica de
+>     emplacamento de caminhões da ANFAVEA, utilizando variáveis
+>     macroeconômicas como preditores.
+
+> 2.  Criar um aplicativo interativo em Python/Streamlit para visualização
+>     dos resultados e simulações "What If" de variáveis macroeconômicas.
+
+## <font color="#248763">**1.1 Explicando os Dados** </font>
+
+### **1.1.1 - ANFAVEA**
+
+> A Associação Nacional dos Fabricantes de Veículos Automotores, é a
+> entidade que representa as principais empresas do setor automobilístico no
+> Brasil. Fundada em 1956, a organização atua como porta-voz da indústria
+> junto ao governo e à sociedade, defendendo os interesses de seus
+> associados, que incluem fabricantes de automóveis, comerciais leves,
+> caminhões e ônibus, além de máquinas agrícolas e de construção. Ela
+> desempenha um papel crucial na coleta e divulgação de dados sobre a
+> produção, venda e exportação de veículos, além de promover debates e
+> estudos sobre temas relevantes para o desenvolvimento do setor, como novas
+> tecnologias, segurança veicular e políticas públicas.
+
+> As informações de séries de emplacamentos de Caminhões utilizadas para a
+> realização desta análise foram retiradas o site da
+> [ANFAVEA](https://anfavea.com.br/site/edicoes-em-excel/ "Site contendo bases utilizadas")
+> Licenciamento Total Licenciamento Nacionais Licenciamento Importados
+> Produção Exportação
+
+### **1.1.2 - Variáveis Macroeconomicas**
+
+> As seguintes variáveis macroeconômicas foram todas obtidas através da
+> plataforma do IPEA Data disponível em: [site](http://www.ipeadata.gov.br).
+> As variáveis e suas respectivas descrições são:
+
+> ### I. Taxa de câmbio - R\$ / US\$ - comercial - compra - média (BM12_ERC12)
+>
+> -   **Frequência:** Mensal de 1953.01 até 2024.11;
+> -   **Fonte:** Banco Central do Brasil, Boletim, Seção Balanço de
+>     Pagamentos (Bacen / Boletim / BP);
+> -   **Unidade**: R\$;
+> -   Taxa de câmbio é o preço de uma moeda estrangeira medido em unidades
+>     ou frações (centavos) da moeda nacional. Neste caso a moeda
+>     estrangeira é o dólar. Câmbio Comercial ou Livre corresponde à média
+>     das taxas efetivas de operações no mercado interbancário, ponderada
+>     pelo volume de transações de venda do dia. Taxa calculada para
+>     transações de compra.As taxas médias são calculadas para compra,
+>     utilizando-se as cotações diárias do período em referênciaElaboração
+>     Bacen: média no período, a partir das séries de taxas diárias.
+>     Elaboração Ipeadata: conversão de moeda para Real (R\$) no período
+>     entre 1953.01 e 1994.05.Nota: As transações fechadas em taxas que mais
+>     se distanciam da média do mercado (outliers) e aquelas que evidenciam
+>     formação artificial de preço ou contrárias às práticas regulares do
+>     mercado são excluídas dos cálculos.Mais informações: SGS- Sistema de
+>     Gerenciamento de Séries Temporais, Banco Central.
+
+> ### II. Produto Interno Bruto (PIB) (BM12_PIB12)
+>
+> -   **Frequência:** Mensal de 1990.01 até 2024.10;
+> -   **Fonte:** Banco Central do Brasil, Boletim, Seção Atividade Econômica
+>     (Bacen / Boletim / Ativ. Ec.);
+> -   **Unidade**: R\$ (milhões) - Valor Nominal;
+> -   O Produto Interno Bruto (PIB) denominado como PIB mensal é um
+>     indicador com frequência mensal produzido pelo Banco Central do Brasil
+>     (BCB) para utilização no cálculo da relação entre agregados econômicos
+>     mensais (como dívida pública, saldo em transações correntes e saldo de
+>     crédito) e o PIB.Elaboração Bacen: estimativa é feita via interpolação
+>     dos valores trimestrais já divulgados ou dos projetados, não se
+>     tratatando de cálculo do PIB a partir de informações primárias. Nota:
+>     Este cálculo mensal é feito uma vez que o PIB calculado oficialmente
+>     no Brasil pelo IBGE, é divulgado com frequência trimestral, ao passo
+>     que várias informações econômicas compiladas pelo Banco Central são
+>     mensais. Mais informações: SGS- Sistema de Gerenciamento de Séries
+>     Temporais, Banco Central.
+
+> ### III. Índice geral de preços do mercado (IGP-M) (IGP12_IGPMG12)
+>
+> -   **Frequência:** Mensal de 1989.07 até 2024.10
+> -   **Fonte:** Fundação Getulio Vargas, Conjuntura Econômica - IGP
+>     (FGV/Conj. Econ. - IGP);
+> -   **Unidade**: (% a.m.);
+> -   O Índice Geral de Preços (IGP) registra o ritmo evolutivo de preços
+>     como medida síntese da inflação nacional. Apresenta-se em três
+>     versões: Índice Geral de Preços - 10 (IGP-10), Índice Geral de Preços
+>     do Mercado (IGP-M) e Índice Geral de Preços -- Disponibilidade Interna
+>     (IGP-DI). A diferença entre eles está no período de apuração das
+>     informações para cálculo do índice. O Índice Geral de Preços do
+>     Mercado (IGP-M) é um indicador do movimento de preços que cobre todo o
+>     processo produtivo, desde preços de matérias-primas agrícolas e
+>     industriais, passando pelos preços de produtos intermediários até os
+>     de bens e serviços finais. É composto pela média ponderada do Índice
+>     de Preços ao Produtor Amplo do Mercado (IPA-M) (60%), do Índice de
+>     Preços ao Consumidor do Mercado (IPC-M) (30%) e do Índice Nacional de
+>     Custo da Construção do Mercado (INCC-M) (10%). Para efeito de coleta
+>     de preços, o IGP-M mede a evolução de preços no período compreendido
+>     entre os dias 21 do mês anterior e o dia 20 do mês de referência.
+>     Nota: Na época de transição para o Real (R\$) - Julho e Agosto de
+>     1994 - a FGV calculou o IGP-2, uma variante do IGP-M mas calculado com
+>     valores na nova moeda. O IGP-M reflete a comparação dos preços
+>     praticados na nova moeda (R\$) com os preços praticados ainda em CR\$
+>     convertidos para Reais pela paridade R\$ = 2750 CR\$. O IGP-2 reflete
+>     a comparação dos preços praticados em R\$ com os preços praticados
+>     ainda em CR\$ porém convertidos para Reais pela cotação diária da URV.
+>     As 2 formas apresentam resultados distintos.
+
+> ### VI. Taxa de juros - Over / Selic - acumulada no mês (BM12_TJOVER12)
+>
+> -   **Frequência:** Mensal de 1974.01 até 2024.11
+> -   **Fonte:** Banco Central do Brasil, Boletim, Seção mercado financeiro
+>     e de capitais (Bacen/Boletim/M. Finan.);
+> -   **Unidade**: (% a.m.);
+> -   Receber uma quantia hoje ou no futuro não são evidentemente a mesma
+>     coisa. Em princípio, uma unidade monetária hoje é preferível à mesma
+>     unidade monetária disponível amanhã. Postergar uma entrada de caixa
+>     (recebimento) por certo tempo envolve um sacrifício, o qual deve ser
+>     pago mediante uma recompensa, definida pelos juros. A taxa de juro é o
+>     coeficiente que determina o valor do juro, isto é, a remuneração do
+>     fator capital utilizado durante certo período de tempoTaxa de juros
+>     acumulada mensal tendo como base a taxa Selic diária.A taxa Selic é a
+>     taxa de juros média apurada no Sistema Especial de Liquidação e
+>     Custódia (Selic), que incide sobre operações de financiamento por um
+>     dia útil (overnight), lastreadas por títulos públicos registrados no
+>     Sistema. É utilizada como instrumento primário de política monetária
+>     do Comitê de Política Monetária (Copom), visando ao cumprimento da
+>     meta para inflação. O Copom estabelece a meta para a taxa Selic, e
+>     cabe à mesa de operações do mercado aberto do Banco Central do Brasil
+>     (BCB) manter a taxa Selic diária próxima à meta.
+
+> ### V. Produção industrial - fabricação de veículos automotores, reboques e carrocerias: índice de quantum (média 2022 = 100) (PIMPFN12_QIIGNN2012)
+>
+> -   **Frequência:** Mensal de 2002.01 até 2024.09
+> -   **Fonte:** Instituto Brasileiro de Geografia e Estatística, Pesquisa
+>     Industrial Mensal - Produção Física (IBGE/PIM-PF)
+> -   **Unidade**: Índice média 2022 = 100;
+> -   A produção industrial da fabricação de veículos automotores, reboques
+>     e carrocerias compreende a fabricação de veículos automotores para
+>     transporte de pessoas e mercadorias e a fabricação de cabines,
+>     carrocerias, reboques e semi-reboques para veículos automotores, assim
+>     como a fabricação de peças e acessórios de material elétrico e
+>     eletrônico, de bancos e estofados para os veículos automotores. Esta
+>     classe não compreende a manutenção e reparação de veículos
+>     automotores. A base foi fixada como a média das observações no ano
+>     de 2022. Notas: A Pesquisa Industrial Mensal Produção Física têm por
+>     objetivo acompanhar a evolução do produto real da indústria no curto
+>     prazo, sendo necessário o levantamento de informações de volume físico
+>     de produtos selecionados e representativos de diferentes atividades
+>     industriais, como das indústrias extrativas e de transformação. A
+>     pesquisa vêm sendo feita desde 1970, com informações fornecidas todos
+>     os meses, até o dia 10 de cada mês posterior ao de referência. A
+>     partir de maio de 2014, a Pesquisa Industrial Mensal Produção Física,
+>     sofre reformulação e dá-se início a divulgação da nova série de
+>     índices mensais da produção industrial, com base nas novas
+>     classificações, de atividades e produtos, usadas pelas demais
+>     pesquisas da indústria a partir de 2007, quais sejam: a Classificação
+>     Nacional de Atividades Econômicas - CNAE 2.0 e a Lista de Produtos da
+>     Indústria - PRODLIST-Indústria. Segundo a classificação da CNAE 2.0, a
+>     Produção Industrial só identifica os serviços industriais mais
+>     importantes e somente quando são exercidos sob contrato. Em 2023, a
+>     pesquisa teve uma nova atualização e que foi feita a partir do
+>     cadastro de empresas e produtos produzidos pela Pesquisa Industrial
+>     Anual (PIA-Empresa e PIA-Produto) de 2019. Nesse processo, atualiza-se
+>     o ano base da pesquisa, a cesta de produtos investigados e a estrutura
+>     de ponderação.
+
+----------------------------------------------------------------------------
+
+## <font color="#248763">**1.2 Formatação Inicial das Bases** </font>
+
+> Os dados foram coletados nas fontes citadas acima e dispostos em uma pasta
+> de trabalho do projeto elaborada inicialmente no Google Drive, onde cada
+> uma das bases foi disponibilizada na pasta de `dados_brutos`, para serem
+> tratadas e utilizadas.
+
+> **Na base de Licenciamento de Caminhões, as seguintes informações estão
+> disponíveis:**
+
+> -   **Licenciamento Total:** Representa o número total de caminhões
+>     licenciados no período analisado. Inclui tanto os caminhões produzidos
+>     no Brasil quanto os importados.
+>
+> -   **Licenciamento Nacionais:** Representa o número de caminhões
+>     produzidos no Brasil e licenciados no mesmo período.
+>
+> <!-- -->
+>
+> -   **Licenciamento Importados:** Representa o número de caminhões
+>     produzidos no exterior e licenciados no Brasil no período analisado.
+>
+> <!-- -->
+>
+> -   **Produção:** Representa o número total de caminhões produzidos no
+>     Brasil no período, independentemente de terem sido licenciados no país
+>     ou exportados.
+>
+> <!-- -->
+>
+> -   **Exportação:** Representa o número de caminhões produzidos no Brasil
+>     e exportados para outros países no período analisado.
+
+## <font color="#248763">**1.3 Procedimentos**</font>
+
+### **1.3.1 Modelos Econométricos**
+
+> Para aplicar a previsão a seguir, para o método econométrico,
+> inicialmente, como se suspeta que a série de licenciamentos de caminhões
+> (a variável explicada) é afetada pelas covariádas macroeconomicas mas não
+> as afeta, foram considerados os modelos (ARIMAX / SARIMAX) e o VARX. Onde
+> ambos possuem como mecanismo a utilização de uma matriz de variáveis
+> exógenas na modelagem de uma variável endógena.
+
+> O VARX, por outro lado, é ideal para modelar interações dinâmicas entre
+> múltiplas variáveis endógenas e exógenas, sendo útil se o entendimento das
+> relações entre as macrovariáveis também for importante. No entanto, exige
+> mais tempo para especificação, validação e interpretação, devido à
+> necessidade de determinar o número de defasagens apropriadas e avaliar a
+> estabilidade do sistema. Para previsões de curto prazo com foco no
+> licenciamento de caminhões, a modelagem com VARX pode ser
+> desnecessariamente complexa. Isso aumenta o risco de erros devido à sua
+> maior demanda computacional e de dados.
+
+> Portanto, considerando o prazo curto e a necessidade de uma previsão
+> precisa e eficiente, a melhor escolha inicial é o ARIMAX, por sua
+> simplicidade. Posteriormente, caso se note forte sazonalidade na série, o
+> SARIMAX surge como segunda opção. Eles oferecem flexibilidade para
+> incorporar covariadas exógenas como inflação, câmbio e PIB, além de lidar
+> bem com séries temporais mensais que apresentam sazonalidade. Esse modelo
+> equilibra robustez e facilidade de implementação.
+
+### **1.3.2 Modelos Machine Learning**
+
+> No caso dos modelos de Machine Learning, O XGBoost foi o modelo optado
+> pela sua capacidade de lidar com relações complexas e não lineares entre
+> as variáveis, algo que os modelos tradicionais de séries temporais podem
+> ter dificuldade em capturar. Ele pode identificar nuances e padrões sutis
+> nos dados, como a influência defasada de uma variável ou a interação entre
+> diferentes indicadores, que passariam despercebidos por outros modelos.
+
+> Comparado ao SARIMAX, o XGBoost pode apresentar maior precisão preditiva,
+> especialmente em cenários com relações complexas entre as variáveis, além
+> de oferecer maior interpretabilidade, permitindo identificar a importância
+> de cada variável na previsão do licenciamento de caminhões o que pode
+> auxiliar na tomada de decisão, revelando quais fatores macroeconômicos
+> mais impactam as vendas. No entanto, exige um processo de ajuste fino
+> (tuning) de seus hiperparâmetros para alcançar o melhor desempenho.
+
+# <font color="#195447">**2. TRATAMENTO** </font>
+
+#### **Nesta sessão se dará o seguimento dos processos de adequação e tratamento dos dados para serem encaminhados ao métodos de previsão. Todos o processamento será feito na `linguagem R` de programação.**
+
+----------------------------------------------------------------------------
+
+## <font color="#248763">**2.1 Carregando Pacotes e Dados** </font>
+
+> A seguir estão os pacotes utilizados para a análise dispostos em uma
+> tabela, com uma breve explicação dos objetivos de cada um.
+
+|  **Pacotes**  |                **Explicação**                 |
+|:-------------:|:---------------------------------------------:|
+|   **dplyr**   |        Manipulação eficiente de dados         |
+|  **stringr**  | Manipulação de strings e expressões regulares |
+|  **readxl**   |    Leitura de arquivos Excel (.xlsx) no R     |
+|  **janitor**  |        Limpeza e organização de dados         |
+|  **ggplot2**  |          Criação de gráficos e plots          |
+| **gridExtra** |   Organização de plot de multiplos graficos   |
+
+----------------------------------------------------------------------------
+
+#### **Código utilizado para importar as bases de dados**
+
+```{r carregando pacotes, message=FALSE, warning=FALSE}
+# Lista de pacotes a serem carregados
+
+packages <- c('dplyr', 'stringr', 'ggplot2', 'readxl','janitor','knitr','vars','tseries')
+
+# Encontrar os pacotes que não estão instalados
+to_install <- setdiff(packages, installed.packages()[, "Package"])
+
+# Instalar os pacotes que não estão instalados
+if ( length(to_install) > 0 ) { install.packages(to_install) }
+
+# Carregar todos os pacotes
+for ( package in packages ) { library(package, character.only = TRUE) }
+rm(package,packages)
+```
+
+----------------------------------------------------------------------------
+
+### **Leitura de Dados**
+
+> Neste passo, as séries de **Licenciamento de Caminhões** e os dados
+> macroeconômicos estão sendo carregados.
+
+```{r leitura dos dados, message=FALSE, warning=FALSE}
+caminho <- "G:/Meu Drive/Cases/case_MT2-Data/dados/dados_brutos/"
+
+# Lendo dados de licenciamento
+licen <- read_xlsx( paste0(caminho, "SeriesTemporais_Autoveiculos.xlsm") )
+
+# Cria uma lista chamada 'series_macro' contendo os dados macroeconômicos
+series_macro <- list(
+  'pib'       = read.csv2( paste0(caminho, "pib.csv")        ),
+  'selic'     = read.csv2( paste0(caminho, "selic.csv")      ),
+  'tx_cambio' = read.csv2( paste0(caminho, "tx_cambio.csv")  ),
+  'prod_ind'  = read.csv2( paste0(caminho, "prod_indus.csv") ),
+  'infl'      = read.csv2( paste0(caminho, "igp-m.csv")      ) 
+)
+```
+
+----------------------------------------------------------------------------
+
+## <font color="#248763">**2.2 Matriciamento das var. Macro** </font>
+
+> Inicialmente, como as séries retiradas do IPEA Data estão elencadas em
+> datas diferentes e dispostas cada uma em um csv. O primeiro passo é
+> modificar as datas para que tenham o mesmo número de observações dentro
+> dos 10 anos de amostra sujeridos no exercício.
+
+#### **Tratando a lista de Variáveis Macro**
+
+```{r tratamento das var macro}
+vars_macro <- lapply(series_macro, function(df) {
+  
+  # Remove colunas vazias do dataframe
+  df <- remove_empty(df, which = 'cols') %>% 
+    
+    # Filtra os dados para o período entre 2014 e setembro de 2024
+    filter( (Data >= 2014)  & (Data <= 2024.09) ) %>% 
+    
+    # Renomeia a segunda coluna do dataframe para 'valor'
+    rename(valor = names(df)[2])
+})
+```
+
+#### **Corrigindo a série do PIB trasendo-a a valor de 2024.09**
+
+```{r}
+# obtendo valor da inflacao
+infl <- vars_macro[['infl']]$valor / 100
+
+# tranformando as taxas mensais negativas em deflacao calculavel
+infla_calculo <- ifelse(infl < 0, 1/(abs(infl) + 1) ,1 + infl)
+
+# obetendo o valor de deflação comparado ao ultimo mes da obs 2024.09
+infla_cum_2024_09 <- rev(cumprod( rev(infla_calculo) ))
+
+# aplicando deflacao no pib
+vars_macro[["pib"]]$valor <- infla_cum_2024_09 * vars_macro[["pib"]]$valor
+```
+
+Neste código, o objetivo é realizar a deflação do Produto Interno Bruto
+(PIB) com base nos valores de inflação mensal, utilizando um cálculo
+cumulativo de variações. Abaixo, seguem as etapas descritas com suas
+respectivas explicações matemáticas:
+
+> 1.  Obtenção da taxa de inflação A variável \texttt{infl} contém os
+>     valores da inflação mensal em termos percentuais, que são convertidos
+>     para uma escala decimal pela divisão por 100:
+
+$$
+\text{infl} = \frac{\text{valor_inflacao}}{100}.
+$$
+
+> 2.  Transformação das taxas negativas em variações deflacionárias As taxas
+>     de inflação negativas (deflação) são ajustadas para permitir um
+>     cálculo consistente. Para isso, utiliza-se a seguinte regra:
+
+$$
+\text{infla_calculo} = 
+\begin{cases} 
+\frac{1}{|\ \text{inflacao (a.m.)}\ | + 1}, & \text{se } \text{inflacao} < 0, \\
+1 + \text{inflacao}, & \text{caso contrario}.
+\end{cases}
+$$
+
+Essa transformação assegura que as variações negativas sejam representadas
+de forma multiplicativa, coerente com o modelo cumulativo.
+
+> 3.  Cálculo cumulativo das variações desde 2024.09
+
+O fator de deflação cumulativo é calculado a partir do produto acumulado das
+variações inversas, considerando os meses em ordem decrescente. Seja
+$\text{infla_calculo}_t$ a variação no mês $t$, então o fator cumulativo
+$\text{infla_cum_2024_09}_t$ é dado por:
+
+$$
+\text{infla_cum_2024_09}_t = \prod_{i=t}^{\text{último mês}} \text{infla_calculo}_i.
+$$
+
+> 4.  Aplicação do fator de deflação ao PIB
+
+O valor ajustado do PIB é obtido multiplicando os valores observados do PIB
+(\texttt{series\_macro[["pib"]]}) pelo fator cumulativo calculado:
+
+$$
+\text{PIB_deflacionado}_t = \text{infla_cum_2024_09}_t \cdot \text{PIB}_t.
+$$
+
+Essa abordagem ajusta os valores do PIB considerando as variações de
+inflação acumuladas ao longo do tempo, permitindo comparações reais ao longo
+dos meses.
+
+----------------------------------------------------------------------------
+
+### **Modificando a base de licenciamento e juntando-a às séries Macro**
+
+> Os dados originais retirados da ANFEVEA contém várias informações como foi
+> listado acima. Contúdo, como o objetivo é verificar a série de caminhões
+> em um agregado nacional como um todo, será selecionada apenas a variável
+> `Licenciamento Total`, que apresenta a contagem de caminhões licenciados
+> ao longo do mês em questão.
+
+> Após isso, será criada um data.frame que contenha todas as séries a serem
+> utilizadas no case.
+
+#### **Confecção da base de Licenciamento e agregação das séries**
+
+```{r agregando_bases}
+# modificando a de licenciamento --------------------------
+# Manipula o dataframe 'licen'
+base <- licen %>% 
+  
+  # Var de tempo em formato de data
+  mutate(mes_ano = as.Date(mes_ano)) %>% 
+  
+  # Filtra os dados para o período a partir de janeiro de 2014
+  filter((mes_ano > '2013-12-01') & (mes_ano < '2024-10-01') ) %>% 
+  
+  # Renomeia a coluna 'Licenciamento Total' para 'licen'
+  rename(licen = `Licenciamento Total`) %>% 
+  
+  # Seleciona apenas as colunas 'mes_ano' e 'licen'
+  dplyr::select(mes_ano,licen) %>% 
+  
+  # Adiciona as var macro ao dataframe
+  mutate( 
+    pib        = vars_macro[['pib']]$valor,      
+    selic      = vars_macro[['selic']]$valor,    
+    tx_cambio = vars_macro[['tx_cambio']]$valor, 
+    prod_ind  = vars_macro[['prod_ind']]$valor,  
+    infl      = vars_macro[['infl']]$valor
+  ) 
+```
+
+##### **Abaixo, está o resultado parcial da base para melhor compreenção do que foi realizado no código**
+
+```{r mostrando dados1, echo=FALSE}
+
+# disponibilizando os dados
+DT::datatable(base, options = list(pageLength = 7))
+```
+
+----------------------------------------------------------------------------
+
+# <font color="#195447">**3. ANÁLISE DESCRITIVA**</font>
+
+#### **Agora, após o tratamento da base, podemos dar seguimento à análise pela ótica da Modelagem Preditiva. Contudo, antes veremos algumas estatísticas descritivas das informações, além de visualizações gráficas a fim de termos uma melhor noção do contexto dos licenciamentos durante este período.**
+
+----------------------------------------------------------------------------
+
+## <font color="#248763">**3.1 Visualizando Séries**</font>
+
+> **Podemos ver como ficaram as flutuações das séries de dados ao longo dos intervalos de tempo em cada uma das formas realizadas.**
+
+### Licencimantos Caminhões
+
+```{r grafico_serie_licenciamento, echo=FALSE, fig.width=10,fig.height=5}
+ggplot(
+  base[,c('mes_ano','licen')],
+  aes(x = mes_ano, y = licen, color = "darkred")
+) +
+  geom_line() +
+  labs(title = "Gráfico de Flutuação dos Licenciamentos de Caminhões",
+       x = "Data",
+       y = "Licenciamentos (un)") +
+  theme_bw() +
+  theme(legend.position = "none") +  # Retira a legenda
+  scale_x_date(
+    date_breaks = "12 months",  # Define a frequência das marcas para 3 meses
+    date_labels = "%b/%Y"      # Define o formato da data como "mês abreviado/ano"
+  )
+
+```
+
+### PIB - Deflacionado
+
+```{r grafico_serie_PIB, echo=FALSE, fig.width=10,fig.height=5}
+ggplot(
+  base[,c('mes_ano','pib')],
+  aes(x = mes_ano, y = pib)
+) +
+  geom_line(color = "darkblue") +
+  labs(title = "Gráfico de Flutuação do PIB",
+       x = "Data",
+       y = "PIB - (R$ 2024-09)") +
+  theme_bw() +
+  theme(legend.position = "none") +  # Retira a legenda
+  scale_x_date(
+    date_breaks = "12 months",  # Define a frequência das marcas para 3 meses
+    date_labels = "%b/%Y"      # Define o formato da data como "mês abreviado/ano"
+  )
+```
+
+### Câmbio
+
+```{r grafico_serie_cambio, echo=FALSE, fig.width=10,fig.height=5}
+ggplot(
+  base[,c('mes_ano','tx_cambio')],
+  aes(x = mes_ano, y = tx_cambio)
+) +
+  geom_line(color = 'darkorange') +
+  labs(title = "Gráfico de Flutuação do Câmbio",
+       x = "Data",
+       y = "Câmbio (R$/US$)") +
+  theme_bw() +
+  theme(legend.position = "none") +  # Retira a legenda
+  scale_x_date(
+    date_breaks = "12 months",  # Define a frequência das marcas para 3 meses
+    date_labels = "%b/%Y"      # Define o formato da data como "mês abreviado/ano"
+  )
+
+```
+
+### Selic
+
+```{r grafico_serie_selic, echo=FALSE, fig.width=10,fig.height=5}
+ggplot(
+  base[,c('mes_ano','selic')],
+  aes(x = mes_ano, y = selic)
+) +
+  geom_line(color = 'purple') +
+  labs(title = "Gráfico de Flutuação da Selic",
+       x = "Data",
+       y = "Selic (% a.m.)") +
+  theme_bw() +
+  theme(legend.position = "none") +  # Retira a legenda
+  scale_x_date(
+    date_breaks = "12 months",  # Define a frequência das marcas para 3 meses
+    date_labels = "%b/%Y"      # Define o formato da data como "mês abreviado/ano"
+  )
+
+```
+
+### Produção Industrial
+
+```{r grafico_serie_prod_indus, echo=FALSE, fig.width=10,fig.height=5}
+ggplot(
+  base[,c('mes_ano','prod_ind')],
+  aes(x = mes_ano, y = prod_ind)
+) +
+  geom_line(color = 'darkgreen') +
+  labs(title = "Gráfico de Flutuação da Produção Industrial",
+       x = "Data",
+       y = "indice (ancorado em 2022 = 100)") +
+  theme_bw() +
+  theme(legend.position = "none") +  # Retira a legenda
+  scale_x_date(
+    date_breaks = "12 months",  # Define a frequência das marcas para 3 meses
+    date_labels = "%b/%Y"      # Define o formato da data como "mês abreviado/ano"
+  )
+
+```
+
+### Inflação - IGP-M
+
+```{r grafico_serie_infl, echo=FALSE, fig.width=10,fig.height=5}
+ggplot(
+  base[,c('mes_ano','infl')],
+  aes(x = mes_ano, y = infl)
+) +
+  geom_line(color = 'black') +
+  labs(title = "Gráfico de Flutuação da taxa de Inflação mensal (IGP-M)",
+       x = "Data",
+       y = "indice (ancorado em 2022 = 100)") +
+  theme_bw() +
+  theme(legend.position = "none") +  # Retira a legenda
+  scale_x_date(
+    date_breaks = "12 months",  # Define a frequência das marcas para 3 meses
+    date_labels = "%b/%Y"       # Define o formato da data como "mês abreviado/ano"
+  )
+```
+
+# <font color="#195447">**4. VARIÁVEIS MACRO FUTURAS**</font>
+
+> Para poder realizar as modelagens, a opção seguida neste exercício foi de
+> priorizar a obtenção de variáveis macroeconômicas futuras por meio da
+> obtenção de dados de expectativas de mercado. O Bacen, em seu site:
+> Sistema Gerenciador de Séries Temporais (SGS)
+> (<https://www3.bcb.gov.br/sgspub/>) apresenta compilados de expectativas
+> de vários agentes de mercado e compila essas informações na sessão no
+> Sistema de Expectativas de Mercado
+> (<https://www3.bcb.gov.br/expectativas2/#/consultas>).
+
+> Como o exercício pretende prever o licenciamento de caminhões através de
+> informações macroeconômicas, a forma ideal seria confiar nas previsões dos
+> entes de mercado que, em tese, deveriam ser mais acuradas do que uma
+> previsão endógena em um modelo linear estatístico como o que será aplicado
+> asseguir.
+
+## <font color="#248763">**4.1 Capturando as séries**</font>
+
+> **No sistema, os dados que apresentam agregação a nível mensal são apenas
+> os de Inflação (IGP-M) e a taxa de câmbio. A Selic está disponível a nível de 45 em 45 dias (Reuniões do Copom), enquanto as demais estão a nível anual (PIB) ou não possuem mais continuidade de análise (Produção Industrial).**
+
+> **Neste caso, para poder obter um vetor de variáveis previstas para poder aplicar os modelos, irei ajustar um VAR apenas nas séries macroeconômicas, selecionando um intervalo maior de tempo nelas, a fim de obter uma boa estimativa futura de duas tendências.**
+
+```{r}
+# 1. Testar estacionaridade (ADF test)
+adf.test(base$licen)
+adf.test (base$pib)
+adf.test (base$selic)
+adf.test (base$tx_cambio)
+adf.test (base$prod_ind)
+adf.test (base$infl)
+
+# 2. Diferenciar as séries para torná-las estacionárias
+data_diff <- data.frame(
+  # dLicen          = diff(base$licen),
+  dGDP            = diff(base$pib),
+  dInflation      = diff(base$infl),
+  dIndustrialProd = diff(base$prod_ind),
+  dSelic          = diff(base$selic),
+  dExchangeRate   = diff(base$tx_cambio)
+)
+
+# 3. Selecionar a ordem do VAR (número de defasagens)
+VARselect(data_diff, lag.max = 10, type = "const")
+
+# 4. Estimar o modelo VAR
+var_model <- VAR(data_diff, p = 10, type = "const")
+
+previsao_var <- predict(var_model, n.ahead = 12)
+
+# dispondo os dados
+# df_predict_lic <- as.data.frame(previsao_var$fcst$dLicen)
+df_predict_ind <- as.data.frame(previsao_var$fcst$dIndustrialProd)
+df_predict_pib <- as.data.frame(previsao_var$fcst$dGDP)
+df_predict_inf <- as.data.frame(previsao_var$fcst$dInflation)
+df_predict_cam <- as.data.frame(previsao_var$fcst$dExchangeRate)
+df_predict_sel <- as.data.frame(previsao_var$fcst$dSelic)
+
+# criando data frame total e retornando a diferenciacao das series
+
+xreg_future <- data.frame(
+  pib = c(cumsum(df_predict_pib$fcst) + base$pib[129]      ),
+  ind = c(cumsum(df_predict_ind$fcst) + base$prod_ind[129] ),
+  inf = c(cumsum(df_predict_inf$fcst) + base$infl[129]     ),
+  cam = c(cumsum(df_predict_cam$fcst) + base$tx_cambio[129]),
+  sel = c(cumsum(df_predict_sel$fcst) + base$selic[129]    )
+)
+
+
+plot(previsao_var)
+```
+
+```{r}
+# disponibilizando os dados
+DT::datatable(df_predict_pib, options = list(pageLength = 12))
+```
+
+# <font color="#195447">**4. ANÁLISE ECONOMÉTRICA**</font>
+
+#### **Como discutido anteriormente, a análise econométrica se dará utilizando o ARIMAX ou o SARIMAX. A escolha do modelo dependerá da existência ou não de uma sazonalidade estatisticamente significante presente nos dados históricos de licenciamento.**
+
+> 1.  **Tornar a série Estacionária:** Se os dados não forem estacionários, será realizada a diferenciação para remover tendências e sazonalidade, garantindo que os dados tenham média e variância constantes.
+
+
+> 2 **Selecionar a Ordem e Sazonalidade do modelo SARIMAX:** Parametrizar a função auto.arima e conferir os diferentes tipos de ajuste.
+
+> 3.  **Testar a necessidade das variáveis exógenas:** Após ajustar o modelo, será verificada a significância estatística das variáveis macroeconômicas para identificar se a remoção de variáveis menos relevantes melhora o ajuste do modelo.
+
+> 4.  **Avaliar o Modelo:** Avaliar o desempenho do modelo usando medidas estatísticas como erro médio quadrático (MSE), Critério de Informação Akaike (AIC) e Critério de Informação Bayesiano (BIC).
+
+> 5.  **Fazer Previsões:** Utilizar o modelo SARIMAX ajustado para prever os períodos futuros.
+
+### Separando a Série em treino e teste
+
+```{r}
+serie_licen_total <- ts(base$licen, frequency = 12, start = c(2014, 1))
+
+serie_licen_train <- ts(
+  base[base$mes_ano < "2023-09-01",]$licen,
+  frequency = 12,
+  start = c(2014, 1)
+)
+
+serie_licen_test  <- ts(
+  base[base$mes_ano >= "2023-09-01",]$licen,
+  frequency = 12, 
+  start = c(2023, 09)
+)
+
+```
+
+----------------------------------------------------------------------------
+
+## <font color="#248763">**4.1 Testando a hipóteses para esolha do modelo**</font>
+
+> Antes da verificação de Sazonalidade através de testes estatísticos já
+> estruturados, para que eles operem da forma mais adequada, a série deve
+> estar livre da presença de tendência. Portanto, primeiramente será testada
+> a presença de tendência e, caso exista, será removida.
+
+### Presença de Tendência
+
+#### **Teste KPSS**
+
+```{r}
+# Aplicando o teste KPSS com a hipótese nula de estacionariedade em torno de uma tendência
+library(tseries)
+kpss.test(serie_licen_train, null = "Trend")
+```
+
+#### \*\*Teste Phillips - Perron
+
+```{r}
+# Aplicar o teste PP
+pp.test(serie_licen_train)
+```
+
+#### Teste ADF - Generalizado
+
+```{r}
+library(urca)
+
+# Aplicar o teste DF-GLS
+dfgls_test <- ur.df(serie_licen_train, type = "trend", selectlags = "AIC")
+summary(dfgls_test)
+```
+
+> O valor da estatística do teste é -2.803. Esse valor deve ser comparado
+> com os valores críticos fornecidos na tabela para determinar se rejeitamos
+> ou não a hipótese nula de raiz unitária.
+
+> Como a estatística do teste (-2.803) é maior que o valor crítico a 5%
+> (-3.43), não rejeitamos a hipótese nula de raiz unitária a 5% de
+> significância.
+
+> Isso sugere que, de acordo com o teste DF-GLS, há evidências de que a
+> série `serie_licen` não é estacionária.
+
+### Diferenciando a série
+
+```{r fig.width=10,fig.height=7}
+# Diferenciar a série 'serie_licen'
+serie_diff <- diff(serie_licen_train)
+
+# Dividir a área do gráfico em duas linhas e uma coluna
+par(mfrow = c(2, 1))
+
+# Plotar a série original
+plot(serie_licen_train, main = "Série Original")
+
+# Plotar a série diferenciada
+plot(serie_diff, main = "Série Diferenciada")
+
+```
+
+```{r include=FALSE}
+# Restaurar a configuração padrão da área do gráfico
+par(mfrow = c(1, 1))
+```
+
+### Presença de Sazonalidade
+
+```{r}
+# Plotar a ACF
+acf(serie_diff, main = "Autocorrelação (ACF)", lag.max = 24)
+
+```
+
+```{r}
+# Plotar a PACF
+pacf(serie_diff, main = 'Autocorrelação Parcial (PACF)"',lag.max = 24)
+```
+
+> ao observer o ACF e o PACF, Claramente existe um componente sazonal anual
+> onde é negativamente relacionado com o $t-6$ e positivamente com o $t-12$.
+> Essa é uma clara indicação de sazonalidade que será devidamente testada a
+> seguir.
+
+### Teste de Kruskal-Wallis
+
+> O teste de Kruskal-Wallis verifica se há diferenças significativas entre
+> as medianas de dois ou mais grupos. No seu caso, ele compara as medianas
+> dos valores da sua série temporal (serie_diff) em cada mês do ano. Para
+> isso, o teste ordena todos os valores da série, independentemente do mês,
+> e atribui um "posto" (posição na ordem) para cada um. Então, ele calcula a
+> soma dos postos para cada mês e verifica se a diferença entre essas somas
+> é grande o suficiente para ser considerada estatisticamente significativa,
+> ou seja, improvável de acontecer por acaso.
+
+```{r}
+# fator que represente os períodos (meses, no caso de frequência 12)
+meses <- factor(cycle(serie_diff))
+
+# teste de Kruskal-Wallis
+kruskal.test(serie_diff ~ meses)
+```
+
+> Nesse resultado, Kruskal-Wallis chi-squared = 57.486 é a estatística do
+> teste, que mede a diferença entre os grupos. O p-value = 2.707e-07 (muito
+> baixo) indica que é extremamente improvável que as diferenças observadas
+> entre os meses sejam por acaso. Portanto, o teste sugere que há diferenças
+> significativas nas medianas dos valores da série em diferentes meses, o
+> que pode indicar a presença de sazonalidade, mesmo após a diferenciação da
+> série.
+>
+> O teste de Friedman verifica se existe sazonalidade em uma série temporal
+> comparando as medianas dos valores em diferentes períodos sazonais (meses,
+> trimestres, etc.). O teste organiza os dados em uma tabela onde cada linha
+> representa um ano e cada coluna um mês e então classifica os valores de
+> cada ano, do menor para o maior, e calcula a média dos ranks de cada mês
+> em todos os anos. Se houver sazonalidade, ou seja, se os valores tendem a
+> ser maiores em certos meses consistentemente ao longo dos anos, as médias
+> dos ranks desses meses serão significativamente diferentes das médias dos
+> ranks dos outros meses
+
+```{r}
+library(seastests)
+fried(serie_licen_train, freq = 12, diff = T, residuals = F, autoarima = T)
+library(forecast)
+
+```
+
+> O valor-p indica a probabilidade de observar uma diferença entre as
+> medianas dos grupos tão grande quanto a observada em seus dados, caso não
+> houvesse realmente diferença entre os grupos (hipótese nula de que não há
+> sazonalidade).
+
+> Neste caso, o valor indica uma forte diferença entre as medianas dos
+> grupos indicando a existência de sazonalidade.
+
+## <font color="#248763">**4.2 Aplicando o SARIMAX**</font>
+
+> A classe de modelos ARIMA assume entre outras premissas básicas que a
+> série temporal estudada é estacionária, livre de tendência e sazonalidade.
+> A estacionariedade de uma série pode ser verificada a partir do teste de
+> Dickey Fuller, equanto que o efeito de sazonalidade pode ser visto através
+> da visualização da decomposição entre tendência, sazonalidade e resíduo,
+> ou identificada pelo próprio gráfico. Enquanto o efeito de
+> estacionariedade pode ser removido através da diferenciação o efeito da
+> sazonalidade precisa ser contabilizado caso a série assim se comporte.
+>
+> Neste sentido podemos definir sazonalidade como sendo a tendência de um
+> processo em se repetir dentro de um determinado período.
+>
+> A partir deste contexto é fácil perceber que a hipótese de ausência de
+> sazonalidade em uma série temporal pode representar uma limitação
+> significativa para a modelagem com modelos ARIMA. Essa motivação levou à
+> criação de uma nova classe de modelos denominados em inglês por *Seasonal
+> Autoregressive Integrated Moving Average* (SARIMA). A motivação para esses
+> modelos corresponde exatamente à tentativa de capturar os padrões nos
+> dados que se repetem em intervalos periódicos, tais como dias, meses e
+> anos.
+>
+> O modelo SARIMA inclui tanto componentes sazonais como componentes não
+> sazonais. Desta forma, compreendendo em profundidade a modelagem SARIMA
+> temos uma ferramenta poderosa de forecast que leva em conta elementos
+> sazonais.
+
+### **Explicação do Modelo**
+
+> De uma forma geral, um modelo SARIMA pode ser representado da seguinte
+> forma:
+
+$$SARIMA(p,d,q)(P,D,Q)_m$$
+
+> onde:
+>
+> -   $p$ é a ordem da componente autoregressiva (AR) entre a série e os
+>     seus lags, e P tem o mesmo significado para a componente sazonal.
+> -   $d$ é o grau de diferenciação necessário para obter estacionariedade
+>     na série, D tem o mesmo significado para a componente sazonal.
+> -   $q$ é a ordem da média móvel (MA), que modela a relação entre a série
+>     e os resíduos, e Q tem o mesmo significado para a componente sazonal.
+> -   $m$ representa o período observado.
+
+> Vale notar que $m$, é um parâmetro que depende do intervalo de tempo dos
+> dados. Se temos dados medidos ao longo de 1 ano e observamos uma
+> sazonalidade com período de 12 meses, o valor de $m$ será $m=12$.
+>
+> Neste ponto, vale a pena entendermos a equação que é ajustada em um modelo
+> SARIMA:
+
+$$
+W_t^{'}=\underbrace{\Delta^d Y_t}_{\text {série após d diferenças }}
+$$
+
+> o que define o parâmetro d. No caso da série se tornar estacionária após
+> uma diferenciação (d=1), teríamos que $W_t^{'}=Y_t-Y_{t-1}$. No entanto,
+> em uma série com sazonalidade eventualmente também precisamos diferenciar
+> a série na componente sazonal e assim definir o parâmetro D, de tal forma
+> que $W_t=Y_t-Y_{t-1m}$, onde $m$ é o período observado. Deste modo a
+> equação para $W_t$ seria:
+
+$$
+W_t=c +(
+\underbrace{\phi_1 W_{t-1}+\ldots+\phi_p W_{t-p}}_{\mathrm{p} \text { - termos autorregressivos }}+
+\underbrace{\theta_1 e_{t-1}+\ldots+\theta_q e_{t-q}}_{\mathrm{q} \text { - termos de Médias moveis }})+
+(\underbrace{\Phi_1 W_{t-1m}+\ldots+\Phi_p W_{t-Pm}}_{\mathrm{P} \text { - termos sazonais autorregressivos }}+
+\underbrace{\Theta_1 e_{t-1m}+\ldots+\Theta_q e_{t-Qm}}_{\mathrm{Q} \text { - termos sazonais de Médias moveis }})+
+e_t,
+$$
+
+> em que
+> $\phi_1, \ldots, \phi_p, \theta_1, \ldots, \theta_q,\Phi_1, \ldots, \Phi_p, \Theta_1, \ldots, \Theta_q$
+> são valores a serem estimados e $e_t$ é o ruído branco. A título de
+> exemplo, um modelo SARIMA(2,0,3)$\times$(2,0,1,12), ajustaria a seguinte
+> função:
+
+$$
+W_t=
+c+
+(\underbrace{\phi_1 W_{t-1}+\phi_2 W_{t-2}}_{\mathrm{p} \text { - termos autorregressivos }}+
+\underbrace{\theta_1 e_{t-1}+\theta_2 e_{t-2}+\theta_3 e_{t-3}}_{\mathrm{q} \text { - termos de Médias moveis }})+
+(\underbrace{\Phi_1 W_{t-(1\times12)}+\Phi_2 W_{t-(2\times12)}}_{\mathrm{P} \text { - termos sazonais autorregressivos }}+
+\underbrace{\Theta_1 e_{t-(1\times12)}}_{\mathrm{Q} \text { - termos sazonais de Médias moveis }})+
+e_t,
+$$
+
+----------------------------------------------------------------------------
+
+### Identificando o Modelo
+
+> Neste tipo de caso procedemos com uma sequência de análises necessárias
+> para a aplicação do modelo SARIMA através das seguintes etapas:
+
+> -   Verificada a estacionariedade: foram utilizados varios testes de
+>     Dickey Fuller aumentado, o de Phillips-Perron e o KPSS.
+> -   Verificada sazonalidade: Utilizando os testes de Friedman e
+>     Kruskal-Wallis.
+> -   Definir os parâmetros (p,d,q)(P,D,Q,m): será usada a função auto.arima
+>     para varrer o espaço de parâmetros.
+> -   Fazer a previsão de valores: o modelo será ajustado com o melhor
+>     conjunto de parâmetros encontrados no passo anterior e na sequência
+>     será feita a predição para o intervalo de tempo desejado.
+
+> Dado que a função foi diferenciada uma única e com o lag=1, isso permitiu
+> visualizar o valor de $d=1$. O ponto importante, no entanto, é que da
+> mesma forma pode-se deduzir que $D=0$, dado que não foi necessário
+> diferenciar a série em relação ao período de 12 meses de tal forma que a
+> série se tornasse estacionária. Do ponto de vista das equações do início,
+> podemos entender esse processo como a necessidade de calularmos a
+> diferença:
+
+$$W_t^{'}=Y_t-Y_{t-1}$$
+
+> mas não a diferença:
+
+$$W_t=Y_t-Y_{t-1×12}$$
+
+> para que a série se tornasse estacionária. Isso implica que para a série
+> em questão, pode-se assumir $d=1$ e $D=0$ para os parâmetros do modelo
+> SARIMA em questão.
+
+> Vale também observar os plots da ACF e PACF deste conjunto de dados, de
+> modo a evidenciar as correlações entre os diferentes lags.
+
+> Para identificar o modelo de uma forma mais pratica, será utilizada a
+> função auto.arima com parâmetro `seasonal = TRUE`. Dessa forma, os
+> parâmetros (p, d, q) para o componente ARIMA e (P, D, Q, s) para a
+> sazonalidade serão selecionados automaticamente através de um processo de
+> iteração dos possíveis termos onde a escolha do melhor conjunto de
+> especificações é dado com base na minimização da estatística AIC.
+
+> o comando **auto.arima** da linguagem **R**. Esse comando irá nos ajudar a
+> varrer o espaço de parâmetros e encontrar os valores ótimos de
+> (p,d,q)$\times$(P,D,Q)$_m$. De um modo geral, o comando tenta proceder a
+> uma espécie de **grid search** experimentando vários valores de **p** e
+> **q** (assim como das componentes sazonais **P** e **Q**) diferentes,
+> definindo o melhor modelo a partir do menor valor do AIC (também é
+> possível escolher a partir do BIC ou outro critério).
+
+```{r}
+modelo_total <- auto.arima(
+  serie_licen_train,
+  xreg = as.matrix(base %>% filter(mes_ano< '2023-09-01') %>% dplyr::select(-licen,-mes_ano)),
+  seasonal = TRUE,
+  trace = TRUE
+)
+```
+
+> Como parâmetros para a execução da função **auto_arima** foram passadas as
+> opções `seasonal=True`, de modo que ele considere a possibilidade de uma
+> série com sazonalidade. O parâmetro Trace=True permite que ao longo da
+> execução possamos visualizar o conjunto de parâmetros testados.
+
+### **Analisando o Modelo**
+
+```{r}
+summary(modelo_total)
+```
+
+### Interpretando Coeficientes
+
+> **O coeficiente AR(1) de 0.9575 indica uma forte autocorrelação positiva,
+> sugerindo que o valor da série em um período anterior tem um impacto
+> positivo e significativo no valor atual. O coeficiente SAR(1) de 0.2204
+> indica uma autocorrelação sazonal positiva, mas menor, sugerindo que o
+> valor da série no mesmo período do ano anterior também influencia
+> positivamente o valor atual.**
+
+> **As variáveis independentes PIB, Selic, taxa de câmbio e inflação
+> apresentam os seguintes coeficientes: 0.0197, 2845.936, -402.8961 e
+> -63.2689, respectivamente. Esses coeficientes indicam o impacto de cada
+> variável na série, sendo positivo para PIB e Selic e negativo para taxa de
+> câmbio e inflação. No entanto, apenas os coeficientes do PIB e da Selic
+> são estatisticamente significativos, dado seus baixos erro padrão.**
+
+### Interpretando os resultados de Erro
+
+> -   **ME (Erro Médio):** -15.63165. Indica que, em média, o modelo
+>     subestima a série temporal em 15.63 unidades.
+
+> -   **RMSE (Raiz do Erro Quadrático Médio):** 925.9023. É uma medida da
+>     magnitude do erro de previsão, indicando que o desvio padrão dos erros
+>     é de 925.90 unidades.
+
+> -   **MAE (Erro Absoluto Médio):** 655.9238. Similar ao RMSE, mas menos
+>     sensível a outliers, indica que o erro médio de previsão é de 655.92
+>     unidades.
+
+> -   **MPE (Erro Percentual Médio):** -0.9016587%. Indica que, em média, o
+>     modelo subestima a série temporal em 0.90%.
+
+> -   **MAPE (Erro Percentual Absoluto Médio):** 9.078122%. É uma medida do
+>     erro de previsão em termos percentuais, indicando que o erro médio é
+>     de 9.08%.
+
+> -   **MASE (Erro Absoluto Médio Escalonado):** 0.3036157. Compara o erro
+>     do modelo com o erro de um modelo naive, indicando que o modelo tem um
+>     desempenho 30% melhor.
+
+> -   **ACF1 (Autocorrelação de primeira ordem dos resíduos):** 0.08917316.
+>     Há uma autocorrelação positiva fraca nos resíduos, sugerindo que o
+>     modelo não capturou toda a estrutura da série temporal.
+
+### Comparando outros modelos
+
+> **A necessidade de variáveis exógenas para o forecast pode ser questionada
+> a medida em que o modelo indique a baixa necessidade dela nos calculos.
+> Contudo, apesar de inicialmente parecer uma boa ideia retira-las a medida
+> em que o AIC e o BIC possa melhorar, existe o problema da retirada de
+> variáveis necessárias para o modelo o que pode mudar o comportamento do
+> erro tranformando-o em um erro correlacionado com as previsões, tornando o
+> resultado viesado e mal especificado.**
+
+> **Por conta disso, será considerada a retirada de apenas uma variável
+> exógena e, será analisada sua relevância teórica para a análise.**
+
+```{r}
+modelo_1 <- auto.arima(
+  serie_licen_train,
+  xreg = as.matrix(base %>% filter(mes_ano< '2023-09-01') %>%  dplyr::select(-licen, -mes_ano, -prod_ind)),
+  seasonal = TRUE
+)
+modelo_2 <- auto.arima(
+  serie_licen_train,
+  xreg = as.matrix(base %>% filter(mes_ano< '2023-09-01') %>% dplyr::select(-licen, -mes_ano, -tx_cambio)),
+  seasonal = TRUE
+)
+modelo_3 <- auto.arima(
+  serie_licen_train,
+  xreg = as.matrix(base %>% filter(mes_ano< '2023-09-01') %>% dplyr::select(-licen, -mes_ano, -infl)),
+  seasonal = TRUE
+)
+```
+
+```{r}
+summary(modelo_1)
+cat('\n \n \n',paste0(rep('=', 60),collapse = ''), '\n \n \n')
+summary(modelo_2)
+cat('\n \n \n',paste0(rep('=', 60),collapse = ''), '\n \n \n')
+summary(modelo_3)
+
+```
+
+> **Como é possivel ver nas regressões abaixo, a medida em que vai se
+> removendo as variáveis com não significantes do modelo, os indicadores de
+> AIC e BIC vão diminuindo, contúdo, as medidas de erro dos modelos se
+> alteram em um formato não tão linear demonstrando que, a depender da
+> variável retirada o modelo pode ser pior.**
+
+> **Além disso, a retirada de algumas variáveis altera o modelo selecionado
+> pelo auto arima. Para escolher a melhor opção de retirada, será
+> considarado qual o modelo que menos altera o original e entrega os
+> melhores parâmetros de erro e AIC e BIC sem tornar o erro
+> correlacionado.**
+
+> **O Modelo_2 (variável removida foi a taxa de cambio), percebe-se que o
+> AIC e o BIC se reduzem consideravelmente quando comparado aos demais mas a
+> modelagem escolhida pelo auto.arima apresentou o mesmo padrão AR(0) e
+> MA(0), mas com tendência nos licenciamentos, contúdo acrescentou 1
+> componete de tendência e de médias móveis para a sazonalidade. As medidas
+> de erro são melhores do que o todos os modelos. Portanto, ele foi
+> escolhido para ser utilizado no forcast.**
+
+### Analisando os residuos
+
+> **O teste Ljung-Box é usado para verificar se os resíduos de um modelo de
+> série temporal são autocorrelacionados, ou seja, ele verifica se existe
+> algum padrão nos resíduos que o modelo não conseguiu capturar.**
+
+```{r}
+checkresiduals(modelo_2)
+```
+
+> **A hipótese nula do teste Ljung-Box é que os resíduos não são
+> autocorrelacionados. Um valor-p alto indica que não há evidências
+> suficientes para rejeitar a hipótese nula, o que indica o modelo
+> ARIMA(0,1,0)(0,1,1)[12] como sendo um bom agente em capturar a
+> autocorrelação nos dados.**
+
+> **Apesar disso, é possível observar que o gráfico dos resíduos apresenta
+> alguns vales e picos em momentos muito específicos como em 2015 e no
+> início de 2020. Isso pode indicar que existiu algum tipo de choque
+> estrutural nestes momentos. Uma sujestão de melhora do modelo é capturar
+> esses choques por meio da modelagem de dummies a fim de melhorar a
+> acuracia do sistema.**
+
+### Enxergando o encaixe do Modelo nos dados
+
+```{r,  fig.width=10,fig.height=5}
+plot(serie_licen_total, main = "Série Temporal com Ajuste do SARIMAX")
+lines(fitted(modelo_2), col = "blue")  # Adiciona os valores ajustados
+legend("bottomright", legend = c("Real", "Ajustado"), col = c("black", "blue"), lty = 1)
+
+```
+
+### Testando o modelo nos dados de teste
+
+```{r}
+previsao <- forecast(
+  modelo_2,
+  xreg = as.matrix(base %>% filter(mes_ano>="2023-09-01") %>% dplyr::select(-licen, -mes_ano, -tx_cambio)),
+  # h = 12
+  )
+resultados_previsao <- summary(previsao)
+
+resultados_previsao$model
+```
+
+```{r,  fig.width=10,fig.height=5}
+
+serie_dados_finais <- window(serie_licen_total, start = c(2023, 9))
+plot(previsao)
+lines(serie_dados_finais, col = "red")  # Adiciona os valores ajustados
+legend("topright", legend = c("Passado", "Ajustado", 'Real'), col = c("black", "blue", 'red'), lty = 1)
+```
+
+## <font color="#248763">**4.2 Previsão** $t+12$</font>
+
+> **Agora, será feito o mesmo processo para identificar o melhor modelo para
+> os dados totais e aplicar a previsão.**
+
+### Fitando modelo para o grupo dos "totais"
+
+```{r}
+modelo_final <- auto.arima(
+  serie_licen_total,
+  xreg = as.matrix(base %>% dplyr::select(-licen,-mes_ano)),
+  seasonal = TRUE
+)
+
+summary(modelo_final)
+
+write.csv2(base, 'G:/Meu Drive/Cases/case_MT2-Data/Dados/dados_finais/base_sarimax.csv')
+```
+
+### **Aplicando modelos sem variáveis**
+
+```{r include=FALSE}
+modelo_1 <- auto.arima(
+  serie_licen_total,
+  xreg = as.matrix(base %>%  dplyr::select(-licen, -mes_ano, -tx_cambio)),
+  seasonal = TRUE
+)
+modelo_2 <- auto.arima(
+  serie_licen_total,
+  xreg = as.matrix(base %>% dplyr::select(-licen, -mes_ano, -prod_ind)),
+  seasonal = TRUE
+)
+modelo_3 <- auto.arima(
+  serie_licen_total,
+  xreg = as.matrix(base %>% dplyr::select(-licen, -mes_ano, -infl)),
+  seasonal = TRUE
+)
+
+```
+
+```{r}
+summary(modelo_1)
+cat('\n \n \n',paste0(rep('=', 60),collapse = ''), '\n \n \n')
+summary(modelo_2)
+cat('\n \n \n',paste0(rep('=', 60),collapse = ''), '\n \n \n')
+summary(modelo_3)
+```
+
+#### **Neste caso, o modelo ideal a ser escolhido será o inicial com todas as variávies, por conta que seu AIC e BIC não são extremamente distantes dos demais.**
+
+### Enxergando o encaixe do Modelo nos dados
+
+```{r fig.height=5, fig.width=10, include=FALSE}
+
+plot(serie_licen_total, main = "Série Temporal com Ajuste do SARIMAX")
+lines(fitted(modelo_final), col = "blue")  # Adiciona os valores ajustados
+legend("bottomright", legend = c("Real", "Ajustado"), col = c("black", "blue"), lty = 1)
+
+```
+
+### Aplicando as previsões do modelo
+
+```{r fig.width=10, warning=FALSE, , fig.height=5}
+previsao <- forecast(
+  modelo_final,
+  xreg = as.matrix(xreg_future %>% dplyr::select(pib, sel, cam, ind, inf)),
+  )
+resultados_previsao <- summary(previsao)
+
+resultados_previsao$model
+```
+
+```{r,  fig.width=10,fig.height=5}
+# Visualizar os resultados
+plot(previsao)
+legend("bottomright", legend = c("Passado", "Pevisto"), col = c("black", "blue"), lty = 1)
+```
+
+### Analisando os residuos
+
+```{r}
+checkresiduals(modelo_final)
+
+```
+
+# <font color="#195447">**5. ANÁLISE MACHINE LEARNING**</font>
+
+> **Toda a ideia de aplicar um modelo de Machine Learning nesses dados é
+> tentar capturar os padrões complexos não lineares que as variáveis possam
+> apresentar na tentativa de melhorar o Forecast. Contúdo, boa parte desses
+> algorítimos, por conta de sua estrutura algorítimica, exige uma grande
+> quantidade de dados para que ele funcione adequadamente.**
+
+> **As Redes Neurais (LSTM/RNN) não foram consideradas pois geralmente
+> necessitam de centenas ou milhares de observações para generalizar bem, o
+> que torna a aplicação arriscada no seu cenário.**
+
+> **Obeservando os algoritmios de Random Forest / Gradient Boosting, ambos
+> os métodos tendem a performar melhor com conjuntos de dados maiores. Com
+> apenas 120 observações, há risco de overfitting (o modelo ajusta-se muito
+> bem aos dados de treino, mas generaliza mal nos dados de teste).**
+
+> **O Gradient Boosting (XGBoost, LightGBM, CatBoost) Geralmente supera o
+> Random Forest em termos de acurácia, especialmente em datasets menores,
+> porque otimiza o ajuste incrementalmente (boosting) permitindo um ajuste
+> mais fino de hiperparâmetros, o que pode ser vantajoso para melhorar a
+> performance no seu conjunto de dados, além de ser robusto a ruídos e
+> overfitting em pequenos datasets, especialmente se bem calibrado.**
+
+## <font color="#248763">**5.1 Aplicação do Modelo** $t+12$</font>
+
+> **O modelo se dará seguindo os seguintes passos:**
+
+> -   **1. Engenharia de Recursos:** Criação de novas features a partir das
+>     existentes como dummies de tempo para a captura de padrões sazonais,
+>     além de lags da variável a ser predita.
+
+> -   **2. Treinamento do Modelo:** Definição dos Hiperparâmetros tais como
+>     o número de iterações de boosting; a taxa de aprendizado, a
+>     profundidade máxima da árvore, subamostragem de linhas e a
+>     subamostragem de colunas.
+
+> -   **3. Ajustando os Hiperparâmetros:** Aplicar os calculos para fazer a
+>     melhor seleção de parametros possível.
+
+> -   **4. Avaliação do Modelo e Previsão:** Realizar as previsões com o
+>     modelo treinado usando os dados de teste conferindo as métricas de
+>     avaliação relevantes MSE, MAE, R-quadrado.
+
+### **1. Criando novas Features**
+
+> **A engenharia de recursos é essencial para capturar padrões complexos nas
+> séries temporais que podem influenciar as previsões. A criação de
+> variáveis defasadas (lags) da variável-alvo ajuda o modelo a aprender
+> dependências temporais, como tendências e ciclos. Adicionalmente,
+> variáveis que representam o tempo (como trimestres ou semestres) permitem
+> que o modelo capture efeitos sazonais, caso existam. Esses novos recursos
+> fornecem informações adicionais e enriquecem o conjunto de dados,
+> permitindo que o modelo identifique relações mais significativas.**
+
+```{r}
+# Instalar pacotes necessários
+library(xgboost)
+library(dplyr)
+library(caret)
+
+# Função para criar lags (defasagens)
+create_lags <- function(data, target, lags = 1:3) {
+  for (lag in lags) {
+    data[[paste0(target, "_lag", lag)]] <- dplyr::lag(data[[target]], lag)
+  }
+  return(data)
+}
+
+# Preparar os dados
+base <- base %>%
+  # Ordenar os dados por data
+  arrange(mes_ano) %>%  
+  
+  # estabelecendo variáveis sazonais
+  mutate(
+    anual     = cut(mes_ano, breaks = "12 month", labels = FALSE),
+    semestre  = cut(mes_ano, breaks = "6 month", labels = FALSE),
+    trimestre = cut(mes_ano, breaks = "3 month", labels = FALSE),
+    bimestre  = cut(mes_ano, breaks = "2 month", labels = FALSE)
+  ) %>% 
+  
+  # Criar variáveis defasadas
+  create_lags("licen", lags = 1:3) %>%  
+  # Remover NAs gerados pelas defasagens
+  na.omit()  
+
+
+# disponibilizando os dados
+DT::datatable(base, options = list(pageLength = 12))
+```
+
+### **2. Treinamento do Modelo**
+
+> **O treinamento do modelo envolve a configuração de hiperparâmetros, que
+> são críticos para controlar a capacidade e o desempenho do XGBoost. Por
+> exemplo, o número de iterações de boosting e a taxa de aprendizado
+> determinam como o modelo ajusta seus parâmetros ao longo do treinamento,
+> equilibrando entre precisão e risco de overfitting. A profundidade máxima
+> da árvore limita a complexidade dos padrões que o modelo pode aprender,
+> enquanto a subamostragem de linhas e colunas adiciona aleatoriedade para
+> evitar sobreajuste e melhorar a generalização. Esses ajustes garantem que
+> o modelo seja robusto e eficiente ao capturar os padrões relevantes.**
+
+```{r}
+# Separar dados de treino e teste
+train_size <- floor(0.9 * nrow(base))  # 90% para treino
+train_data <- base[1:train_size, ]
+test_data <- base[(train_size + 1):nrow(base), ]
+
+# Matriz de treino (X e y)
+X_train <- as.matrix(train_data %>% dplyr::select(-mes_ano, -licen))  # Variáveis preditoras
+y_train <- train_data$licen  # Variável-alvo
+
+# Matriz de teste (X e y)
+X_test <- as.matrix(test_data %>% dplyr::select(-mes_ano, -licen))
+y_test <- test_data$licen
+
+# Treinar o modelo XGBoost
+xgb_model <- xgboost(
+  data = X_train,
+  label = y_train,
+  objective = "reg:squarederror", # Regressão
+  nrounds = 500,                  # Número de iterações (boosting rounds)
+  eta = 0.1,                      # Taxa de aprendizado
+  max_depth = 3,                  # Profundidade máxima da árvore
+  subsample = 0.8,                # Subamostragem de linhas
+  colsample_bytree = 0.8,         # Subamostragem de colunas
+  verbose = 0                     # Suprime a saída de log
+)
+```
+
+### **3. Ajustando os Hiperparâmetros**
+
+> **O ajuste dos hiperparâmetros é necessário para encontrar a configuração
+> que maximize o desempenho do modelo. Essa etapa utiliza técnicas como
+> validação cruzada para testar combinações de hiperparâmetros e selecionar
+> aquelas que melhor equilibram viés e variância. Ajustes precisos, como a
+> escolha da profundidade das árvores, taxa de aprendizado e subamostragem,
+> podem melhorar significativamente a capacidade preditiva do modelo sem
+> introduzir overfitting. Essa etapa é crucial para otimizar os resultados e
+> garantir previsões confiáveis.**
+
+```{r eval=FALSE, warning=FALSE}
+# Grid de hiperparâmetros corrigido
+grid <- expand.grid(
+  nrounds = c(100, 300),          # Número de árvores
+  max_depth = c(2, 3),              # Profundidade máxima
+  eta = c(0.01, 0.1),             # Taxa de aprendizado
+  gamma = c(0, 1),                     # Regularização para divisões (split)
+  colsample_bytree = c(0.8, 1),   # Subamostragem de colunas
+  min_child_weight = c(1, 3),       # Tamanho mínimo de um nó
+  subsample = c(0.8, 1)                # Subamostragem de linhas
+)
+
+# Configuração da validação cruzada com janela deslizante
+control <- trainControl(
+  method = "timeslice",
+  initialWindow = 80,  # Janela inicial de treino
+  horizon = 10,        # Horizonte para validação
+  fixedWindow = TRUE   # Janela fixa
+)
+
+# Ajuste do modelo com validação cruzada
+xgb_tuned <- train(
+  licen ~ pib + selic + tx_cambio + prod_ind + infl + anual + semestre + trimestre + licen_lag1 + licen_lag2 + licen_lag3,
+  data = train_data,
+  method = "xgbTree",
+  trControl = control,
+  tuneGrid = grid
+)
+# salvando objeto com melhores parâmetros
+write.csv(
+  xgb_tuned$resample,
+  'G:/Meu Drive/Cases/case_MT2-Data/Dados/dados_intermediarios/resample.csv',
+  row.names = FALSE
+)
+write.csv(
+  xgb_tuned$results,
+  'G:/Meu Drive/Cases/case_MT2-Data/Dados/dados_intermediarios/results.csv',
+  row.names = FALSE
+)
+write.csv(
+  xgb_tuned$bestTune,
+  'G:/Meu Drive/Cases/case_MT2-Data/Dados/dados_intermediarios/bestTune.csv',
+  row.names = FALSE
+)
+
+# Exibir os melhores hiperparâmetros encontrados
+DT::datatable(xgb_tuned$bestTune, options = list(pageLength = 7))
+```
+
+-   **Os parâmetros encontrados foram:**
+
+```{r include=FALSE}
+# Crie um dataframe com os dados
+results <- read.csv(
+  'G:/Meu Drive/Cases/case_MT2-Data/Dados/dados_intermediarios/results.csv'
+)
+resample <- read.csv(
+  'G:/Meu Drive/Cases/case_MT2-Data/Dados/dados_intermediarios/resample.csv'
+)
+bestTune <- read.csv(
+  'G:/Meu Drive/Cases/case_MT2-Data/Dados/dados_intermediarios/bestTune.csv'
+)
+DT::datatable(bestTune, options = list(pageLength = 7))
+
+```
+
+### **3. Avaliação do Modelo:**
+
+> **Após a realização do encontro dos melhores hiperparâmetros, iremos
+> reaplicar o modelo e verificar seu desempenho.**
+
+> **A avaliação do modelo é fundamental para medir o quão bem ele se adapta
+> aos dados de teste, que representam cenários futuros não vistos durante o
+> treinamento. Métricas como o MSE (erro médio quadrático) e MAE (erro
+> absoluto médio) quantificam a precisão das previsões, enquanto o
+> R-quadrado avalia a proporção de variabilidade explicada pelo modelo.
+> Avaliar o desempenho com dados de teste permite identificar se o modelo
+> está generalizando adequadamente ou se está superajustado aos dados de
+> treino.**
+
+```{r}
+# Calcular métricas de avaliação
+DT::datatable(
+  
+  results %>% filter(
+    nrounds           == bestTune$nrounds &
+      max_depth         == bestTune$max_depth &
+      gamma             == bestTune$gamma &
+      colsample_bytree  == bestTune$colsample_bytree &
+      min_child_weight  == bestTune$min_child_weight &
+      subsample         == bestTune$subsample &
+      eta               == bestTune$eta 
+  ) %>% 
+    dplyr::select(MAE, RMSESD, RsquaredSD, MAESD)
+  
+  , options = list(pageLength = 3)
+)
+
+```
+
+> **MAE (Erro Absoluto Médio): 1. Considerando que o MAE é uma medida em
+> termos absolutos, um valor de 1 pode ser considerado um erro muito baixo,
+> sugerindo um bom desempenho do modelo.**
+
+> **RMSESD (Desvio Padrão da Raiz do Erro Quadrático Médio): 1462.48. Um
+> valor alto como 1462.48 sugere que o desempenho do modelo varia bastante
+> entre as folds, indicando que o modelo pode ser sensível a diferentes
+> partes dos dados.**
+
+> **RsquaredSD (Desvio Padrão do R-quadrado): 801.26. Similar ao RMSESD,
+> essa métrica indica a variabilidade do R-quadrado entre as folds da
+> validação cruzada. Novamente, um valor alto como 801.26 sugere uma grande
+> variação no poder explicativo do modelo entre as folds.**
+
+> **MAESD (Desvio Padrão do Erro Absoluto Médio): 801.44. Essa métrica
+> representa a variabilidade do MAE entre as folds e seu alto valor de
+> 801.44 indica que a precisão do modelo, em termos de erro absoluto, varia
+> consideravelmente entre as folds.**
+
+> **Embora o MAE muito baixo sugira um bom desempenho geral, os altos
+> valores de RMSESD, RsquaredSD e MAESD indicam que o modelo pode ter
+> problemas de consistência. Isso pode ocorrer devido à heterogeneidade dos
+> dados ou à instabilidade do modelo**
+
+### Reaplicando o modelo com os melhores parametros
+
+```{r fig.height=5, fig.width=10}
+# Treinar o modelo XGBoost
+xgb_model <- xgboost(
+  data = X_train,
+  label = y_train,
+  objective = "reg:squarederror", # Regressão
+  nrounds = 100,                  # Número de iterações (boosting rounds)
+  eta = 0.1,                      # Taxa de aprendizado
+  max_depth = 3,                  # Profundidade máxima da árvore
+  subsample = 0.8,                  # Subamostragem de linhas
+  colsample_bytree = 0.8,         # Subamostragem de colunas
+  verbose = 0                     # Suprime a saída de log
+)
+
+# Fazer previsões
+predictions <- predict(xgb_model, X_test)
+
+# Importância das variáveis
+importance <- xgb.importance(feature_names = colnames(X_train), model = xgb_model)
+
+# Plotar a importância das variáveis
+xgb.plot.importance(importance_matrix = importance)
+```
+
+### Conferindo o grafico dos resultados e as medidas de erro
+
+```{r fig.height=6, fig.width=12}
+# Plotar os valores reais vs. previstos
+plot(test_data$mes_ano, y_test, type = "l", col = "blue", lwd = 2, ylab = "Licenciamentos", xlab = "Data")
+lines(test_data$mes_ano, predictions, col = "red", lwd = 2)
+legend("bottomright", legend = c("Real", "Previsto"), col = c("blue", "red"), lty = 1, lwd = 2)
+```
+
+### Aplicando nos dados totais e conferindo
+
+```{r}
+# Matriz de treino (X e y)
+X_train <- as.matrix(base %>% dplyr::select(-mes_ano, -licen, -licen_lag1, -licen_lag2, -licen_lag3))  # Variáveis preditoras
+
+y_train <- base$licen  # Variável-alvo
+
+# Treinar o modelo XGBoost
+xgb_model <- xgboost(
+  data = X_train,
+  label = y_train,
+  objective = "reg:squarederror", # Regressão
+  nrounds = 100,                  # Número de iterações (boosting rounds)
+  eta = 0.1,                      # Taxa de aprendizado
+  max_depth = 3,                  # Profundidade máxima da árvore
+  subsample = 0.8,                # Subamostragem de linhas
+  colsample_bytree = 0.8,         # Subamostragem de colunas
+  verbose = 0                     # Suprime a saída de log
+)
+
+
+# Importância das variáveis
+importance <- xgb.importance(feature_names = colnames(X_train), model = xgb_model)
+
+# Plotar a importância das variáveis
+xgb.plot.importance(importance_matrix = importance)
+```
+
+### Conferindo o grafico dos resultados
+
+```{r}
+# Funções para calcular as métricas
+calc_metrics <- function(y_true, y_pred) {
+  mae <- mean(abs(y_true - y_pred))  # Mean Absolute Error
+  rmse <- sqrt(mean((y_true - y_pred)^2))  # Root Mean Squared Error
+  mape <- mean(abs((y_true - y_pred) / y_true)) * 100  # Mean Absolute Percentage Error
+  
+  return(list(MAE = mae, RMSE = rmse, MAPE = mape))
+}
+
+fut_data_xgb <- xreg_future %>% 
+  rename(
+    "selic"     = 'sel',    
+    "tx_cambio" = 'cam',  
+    "prod_ind"  = 'ind', 
+    "infl"      = 'inf'   
+  ) %>% 
+  mutate(
+    bimestre  = c(65,rep(c(66,67,68,69,70), each=2),71),
+    trimestre = c(rep(43,3),rep(44,3),rep(45,3),rep(46,3)),
+    semestre =  c(22,22,22,rep(23,6),rep(24,3)),
+    anual    =  c(11,11,11,rep(12,9))
+  ) %>% 
+  dplyr::select("pib","selic","tx_cambio", "prod_ind","infl","anual","semestre","trimestre","bimestre" )
+
+# Previsões do modelo
+y_pred <- predict(xgb_model, newdata = as.matrix(fut_data_xgb))  
+
+meses_futuros <- c(paste0('2024-',10:12,"-01"), paste0('2025-0',1:9,'-01'))
+```
+
+```{r fig.height=4, fig.width=8}
+# Plotar os valores reais vs. previstos
+# Criar um dataframe com os dados para o gráfico
+df_grafico <- data.frame(
+  mes_ano = c(base$mes_ano,meses_futuros),
+  valores = c(base$licen, y_pred),
+  tipo_dado = c( rep('real',length(base$mes_ano)), rep('previsto',length(meses_futuros)) )
+)
+
+# Criar o gráfico com ggplot2
+# Criar o gráfico com ggplot2
+ggplot(df_grafico, aes(x = mes_ano, y = valores, color = tipo_dado)) +
+  geom_line(lwd = 1) +
+  labs(x = "Data", y = "Licenciamentos", color = "Legenda") +
+  scale_color_manual(values = c("real" = "blue", "previsto" = "red")) +
+  theme_classic()
+```
